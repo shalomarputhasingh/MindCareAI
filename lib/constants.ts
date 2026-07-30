@@ -89,14 +89,7 @@ export const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
   sleep: true,
 };
 
-/** Sidebar order, also used to build the mobile navigation. */
-export const NAV_ITEMS = [
-  { href: "/app", label: "Home", icon: "House" },
-  { href: "/app/chat", label: "AI Chat", icon: "MessageCircleHeart" },
-  { href: "/app/mood", label: "Mood Tracker", icon: "SmilePlus" },
-  { href: "/app/journal", label: "Daily Journal", icon: "NotebookPen" },
-  { href: "/app/habits", label: "Healthy Habits", icon: "ListChecks" },
-  { href: "/app/report", label: "Daily Report", icon: "ChartNoAxesColumn" },
-  { href: "/app/support", label: "Emergency Support", icon: "LifeBuoy" },
-  { href: "/app/settings", label: "Settings", icon: "Settings" },
-] as const;
+/**
+ * Navigation lives in `components/layout/nav-config.ts` so each item can hold a
+ * real Lucide component rather than an icon name that has to be looked up.
+ */
