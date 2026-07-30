@@ -22,7 +22,10 @@ to that provider and nothing else. Specifically, the key is:
 - never written to `.env` or any file on disk,
 - never logged to the server console or included in error messages,
 - never sent to any host other than the provider you selected,
-- never included in an exported backup unless you explicitly choose to include settings.
+- never written into an exported backup. Backups carry your provider, model,
+  temperature and token settings, but the key is deliberately left out, because
+  a backup file is the one artefact here meant to be copied and moved around.
+  Importing a backup likewise never overwrites the key already in your browser.
 
 Treat a key as compromised if you paste it anywhere outside the app, and rotate it at your
 provider's console.

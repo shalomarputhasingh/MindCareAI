@@ -122,10 +122,18 @@ export function AiSettingsCard() {
       toast.error("Enter an API key first.");
       return;
     }
+    // Without a model the app counts as unconfigured, and the shell would bounce
+    // you to the setup wizard the moment you navigated away from this page.
+    if (!model.trim()) {
+      toast.error("Choose a model first.", {
+        description: "Refresh models, then pick one from the list.",
+      });
+      return;
+    }
     update({
       provider,
       apiKey: apiKey.trim(),
-      model,
+      model: model.trim(),
       temperature,
       maxTokens,
     });
@@ -135,7 +143,7 @@ export function AiSettingsCard() {
   return (
     <SectionCard
       title="AI provider"
-      description="MindCareAI talks to your chosen provider directly from this browser. Your key never leaves it except to that provider."
+      description="Your key is stored in this browser and sent, per request, only to the provider you choose. It is never written to disk and never logged."
     >
       <div className="space-y-5">
         <div className="space-y-2">

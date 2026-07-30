@@ -21,15 +21,63 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useSettings } from "@/hooks/use-settings";
 import { ApiError, backupApi, type BackupData } from "@/lib/api-client";
 import { DEFAULT_HABITS, STORAGE_KEYS } from "@/lib/constants";
+import { toDayKey } from "@/lib/date";
 import type { AppSettings, HabitDefinition } from "@/types";
-
-/** Today as `YYYY-MM-DD`, used in the export filename. */
-function todayStamp(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+/**
+ * The settings that travel in a backup — deliberately everything except the API
+ * key. A backup file is the one artefact here designed to be moved around and
+ * shared, so writing the key into it would undo the whole point of keeping it
+ * in this browser only.
+ */
+function portableSettings(settings: AppSettings) {
+  return {
+    provider: settings.provider,
+    model: settings.model,
+    temperature: settings.temperature,
+    maxTokens: settings.maxTokens,
+    onboarded: settings.onboarded,
+  };
+}
+
+/**
+ * Reads settings back out of a file, field by field. A backup is untrusted
+ * input: whitelisting keeps a hand-edited file from injecting an API key or
+ * writing junk into settings.
+ */
+function readPortableSettings(value: unknown): Partial<AppSettings> {
+  if (!isRecord(value)) return {};
+  const patch: Partial<AppSettings> = {};
+
+  if (value.provider === "openrouter" || value.provider === "groq" || value.provider === "gemini") {
+    patch.provider = value.provider;
+  }
+  if (typeof value.model === "string") patch.model = value.model.slice(0, 200);
+  if (typeof value.temperature === "number" && Number.isFinite(value.temperature)) {
+    patch.temperature = Math.min(2, Math.max(0, value.temperature));
+  }
+  if (typeof value.maxTokens === "number" && Number.isFinite(value.maxTokens)) {
+    patch.maxTokens = Math.min(32_000, Math.max(64, Math.trunc(value.maxTokens)));
+  }
+  if (typeof value.onboarded === "boolean") patch.onboarded = value.onboarded;
+
+  return patch;
+}
+
+/** Keeps only well-formed habit definitions from an imported file. */
+function readHabitDefinitionsFrom(value: unknown): HabitDefinition[] | null {
+  if (!Array.isArray(value)) return null;
+
+  const cleaned = value.filter(
+    (item): item is HabitDefinition =>
+      isRecord(item) && typeof item.name === "string" && item.name.trim().length > 0,
+  );
+
+  return cleaned.length > 0 ? cleaned : null;
 }
 
 /**
@@ -60,14 +108,14 @@ export function DataCard() {
       const server = await backupApi.export(guestId);
       const merged: BackupData = {
         ...server,
-        settings: { ...settings },
+        settings: portableSettings(settings),
         habitDefinitions: readHabitDefinitions(),
       };
       const blob = new Blob([JSON.stringify(merged, null, 2)], {
         type: "application/json",
       });
       const url = URL.createObjectURL(blob);
-      const fileName = `mindcareai-backup-${todayStamp()}.json`;
+      const fileName = `mindcareai-backup-${toDayKey()}.json`;
       const link = document.createElement("a");
       link.href = url;
       link.download = fileName;
@@ -129,12 +177,14 @@ export function DataCard() {
       const result = await backupApi.import(guestId, pending.data);
 
       const record = pending.data as unknown as Record<string, unknown>;
-      if (isRecord(record.settings)) {
-        updateSettings(record.settings as Partial<AppSettings>);
-      }
-      if (Array.isArray(record.habitDefinitions)) {
-        setHabitDefinitions(record.habitDefinitions as HabitDefinition[]);
-      }
+
+      // The key is never restored from a file — the one already in this browser
+      // stays put, so importing a backup can't swap in someone else's.
+      const settingsPatch = readPortableSettings(record.settings);
+      if (Object.keys(settingsPatch).length > 0) updateSettings(settingsPatch);
+
+      const definitions = readHabitDefinitionsFrom(record.habitDefinitions);
+      if (definitions) setHabitDefinitions(definitions);
 
       const { journals, moods, habits, chat } = result.imported;
       toast.success("Backup imported", {
@@ -157,7 +207,7 @@ export function DataCard() {
   return (
     <SectionCard
       title="Data"
-      description="Export everything as one file, or restore from a previous export."
+      description="Export everything as one file, or restore from a previous export. Your API key is left out of the backup, so you'll re-enter it after importing."
     >
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" onClick={handleExport} disabled={!guestId || exporting}>
