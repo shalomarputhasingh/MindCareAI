@@ -1,7 +1,12 @@
 import type { AiModel, Provider } from "@/types";
 
-import { readSseData, textStream } from "./stream";
-import { describeHttpError, type AiRequest } from "./types";
+import { readSseData, textStreamAfterFirstChunk } from "./stream";
+import {
+  AiError,
+  describeHttpError,
+  emptyReplyError,
+  type AiRequest,
+} from "./types";
 
 /**
  * OpenRouter and Groq both speak the OpenAI chat-completions dialect, so they
@@ -91,21 +96,48 @@ export function streamOpenAi(
       throw await failure(response, endpoint.provider);
     }
 
-    return textStream(parse(response.body));
+    // Populated as the stream runs, and read only if nothing was produced.
+    const state: { finishReason: string | null } = { finishReason: null };
+
+    return textStreamAfterFirstChunk(parse(response.body, state), () =>
+      emptyReplyError(endpoint.provider, state.finishReason),
+    );
   }
 
-  async function* parse(body: ReadableStream<Uint8Array>) {
+  async function* parse(
+    body: ReadableStream<Uint8Array>,
+    state: { finishReason: string | null },
+  ) {
     for await (const data of readSseData(body)) {
       if (data === "[DONE]") return;
+
+      let chunk: {
+        error?: { message?: string; code?: number };
+        choices?: { delta?: { content?: string }; finish_reason?: string | null }[];
+      };
+
       try {
-        const chunk = JSON.parse(data) as {
-          choices?: { delta?: { content?: string } }[];
-        };
-        const text = chunk.choices?.[0]?.delta?.content;
-        if (text) yield text;
+        chunk = JSON.parse(data);
       } catch {
-        // Keep-alive comments and partial frames are safe to skip.
+        // Partial or non-JSON frame — skip it rather than kill the stream.
+        continue;
       }
+
+      // Both providers answer 200 and then report failures inside the body.
+      // Without this the stream just ends early and looks like an empty reply.
+      if (chunk.error) {
+        throw new AiError(
+          chunk.error.message ?? "The provider stopped the reply.",
+          chunk.error.code ?? 502,
+          endpoint.provider,
+        );
+      }
+
+      const choice = chunk.choices?.[0];
+      if (choice?.finish_reason) state.finishReason = choice.finish_reason;
+
+      const text = choice?.delta?.content;
+      if (text) yield text;
     }
   }
 }

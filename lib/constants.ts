@@ -32,7 +32,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   apiKey: "",
   model: "",
   temperature: 0.7,
-  maxTokens: 1024,
+  // Reasoning models spend tokens thinking before they write anything, and a
+  // tight budget can be used up before a single word of the reply appears.
+  maxTokens: 2048,
   onboarded: false,
 };
 

@@ -1,7 +1,7 @@
 import type { AiModel } from "@/types";
 
-import { readSseData, textStream } from "./stream";
-import { describeHttpError, type AiRequest } from "./types";
+import { readSseData, textStreamAfterFirstChunk } from "./stream";
+import { AiError, describeHttpError, emptyReplyError, type AiRequest } from "./types";
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -87,20 +87,54 @@ export function streamGemini(
 
     if (!response.ok || !response.body) throw await failure(response);
 
-    return textStream(parse(response.body));
+    const state: { finishReason: string | null } = { finishReason: null };
+
+    return textStreamAfterFirstChunk(parse(response.body, state), () =>
+      emptyReplyError("gemini", state.finishReason),
+    );
   }
 
-  async function* parse(body: ReadableStream<Uint8Array>) {
+  async function* parse(
+    body: ReadableStream<Uint8Array>,
+    state: { finishReason: string | null },
+  ) {
     for await (const data of readSseData(body)) {
+      let chunk: {
+        error?: { message?: string; code?: number };
+        promptFeedback?: { blockReason?: string };
+        candidates?: {
+          content?: { parts?: { text?: string; thought?: boolean }[] };
+          finishReason?: string;
+        }[];
+      };
+
       try {
-        const chunk = JSON.parse(data) as {
-          candidates?: { content?: { parts?: { text?: string }[] } }[];
-        };
-        for (const part of chunk.candidates?.[0]?.content?.parts ?? []) {
-          if (part.text) yield part.text;
-        }
+        chunk = JSON.parse(data);
       } catch {
-        // Skip frames that aren't complete JSON.
+        continue;
+      }
+
+      if (chunk.error) {
+        throw new AiError(
+          chunk.error.message ?? "Gemini stopped the reply.",
+          chunk.error.code ?? 502,
+          "gemini",
+        );
+      }
+
+      // The prompt itself was refused before any candidate was produced.
+      if (chunk.promptFeedback?.blockReason) {
+        throw emptyReplyError("gemini", chunk.promptFeedback.blockReason);
+      }
+
+      const candidate = chunk.candidates?.[0];
+      if (candidate?.finishReason) state.finishReason = candidate.finishReason;
+
+      for (const part of candidate?.content?.parts ?? []) {
+        // 2.5-series models stream their reasoning as parts flagged `thought`.
+        // Those are not the answer and must not be shown as one.
+        if (part.thought) continue;
+        if (part.text) yield part.text;
       }
     }
   }

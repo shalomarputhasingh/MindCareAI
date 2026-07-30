@@ -67,3 +67,50 @@ export function describeHttpError(
     provider,
   );
 }
+
+/**
+ * Explains a stream that finished without producing any text.
+ *
+ * This is common enough to deserve real wording: reasoning models can spend
+ * their whole token budget thinking and never reach an answer, and safety
+ * filters drop replies after the request has already succeeded. "Empty reply"
+ * on its own tells the person nothing they can act on.
+ */
+export function emptyReplyError(provider: Provider, reason?: string | null): AiError {
+  const normalised = reason?.toUpperCase();
+
+  if (normalised === "LENGTH" || normalised === "MAX_TOKENS") {
+    return new AiError(
+      "The model used its entire token budget before writing a reply. Raise Max tokens in Settings, or pick a model that doesn't reason as long.",
+      502,
+      provider,
+    );
+  }
+
+  if (
+    normalised === "CONTENT_FILTER" ||
+    normalised === "SAFETY" ||
+    normalised === "BLOCKLIST" ||
+    normalised === "PROHIBITED_CONTENT"
+  ) {
+    return new AiError(
+      "The provider's safety filter stopped this reply. Rephrasing usually helps, and the Emergency Support page is there if you need it.",
+      502,
+      provider,
+    );
+  }
+
+  if (normalised === "RECITATION") {
+    return new AiError(
+      "The provider blocked this reply for quoting its training data too closely. Try asking a different way.",
+      502,
+      provider,
+    );
+  }
+
+  return new AiError(
+    "The model returned an empty reply. Try again, or choose a different model in Settings.",
+    502,
+    provider,
+  );
+}

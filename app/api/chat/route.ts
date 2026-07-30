@@ -66,7 +66,15 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof BadRequest) return jsonError(error.message, 400);
-    if (error instanceof AiError) return jsonError(error.message, error.status);
+    if (error instanceof AiError) {
+      // Providers report in-body error codes that aren't always valid HTTP
+      // statuses, and handing one of those to NextResponse would throw.
+      const status =
+        Number.isInteger(error.status) && error.status >= 400 && error.status <= 599
+          ? error.status
+          : 502;
+      return jsonError(error.message, status);
+    }
     // Never echo the raw error — it can contain the request body, key included.
     console.error("[api/chat] request failed");
     return jsonError("Couldn't reach the AI provider. Check your connection.", 502);
