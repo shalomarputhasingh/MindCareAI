@@ -1,0 +1,72 @@
+// MindCareAI local data store.
+//
+// Everything is scoped by `guestId`, a value generated in the browser and kept in
+// localStorage. There are no accounts, so `guestId` is the only tenancy boundary.
+// Day-scoped rows use a `date` string in `YYYY-MM-DD` form (the user's local day)
+// rather than a DateTime, so "one entry per day" is enforceable by a unique index
+// without timezone ambiguity.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// One journal entry per guest per day.
+model Journal {
+  id        String   @id @default(cuid())
+  guestId   String
+  date      String
+  content   String   @default("")
+  wordCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guestId, date])
+  @@index([guestId, date])
+}
+
+/// One mood check-in per guest per day. `score` is 1 (lowest) to 5 (highest).
+model Mood {
+  id        String   @id @default(cuid())
+  guestId   String
+  date      String
+  score     Int
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guestId, date])
+  @@index([guestId, date])
+}
+
+/// One row per habit per day, recording whether it was completed that day.
+/// The user's habit *definitions* (including custom ones) live in localStorage;
+/// these rows are the completion history.
+model Habit {
+  id        String   @id @default(cuid())
+  guestId   String
+  date      String
+  name      String
+  icon      String?
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guestId, date, name])
+  @@index([guestId, date])
+}
+
+/// Flat chat log. `role` is "user" or "assistant".
+model ChatHistory {
+  id        String   @id @default(cuid())
+  guestId   String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([guestId, createdAt])
+}

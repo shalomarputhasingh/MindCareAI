@@ -16,13 +16,25 @@
 # next.js
 /.next/
 /out/
+/.turbo
 
 # production
 /build
 
 # misc
 .DS_Store
+Thumbs.db
+desktop.ini
 *.pem
+*.key
+*.p12
+*.pfx
+
+# editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
 
 # debug
 npm-debug.log*
@@ -30,8 +42,15 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — never commit real values, only the template
+.env
+.env.*
+!.env.example
+
+# secrets and credentials
+*.local
+secrets.json
+credentials.json
 
 # vercel
 .vercel
@@ -39,3 +58,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local SQLite database — contains the user's journal, moods and habits
+/prisma/*.db
+/prisma/*.db-journal
+/prisma/*.db-wal
+/prisma/*.db-shm
+
+# personal data exported from the app
+*.mindcare-backup.json
