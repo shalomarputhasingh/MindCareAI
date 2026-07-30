@@ -11,26 +11,35 @@ habits. It runs entirely on your own machine: no accounts, no cloud database, no
 
 ## Status
 
-Under active development, built module by module.
+All sixteen modules are built. Every route compiles, serves, and has been
+exercised end to end.
 
-| # | Module | Status |
-|---|---|---|
-| 1 | Project setup and data layer | Done |
-| 2 | Design system | Done |
-| 3 | Landing page | Next |
-| 4 | Setup wizard | Planned |
-| 5 | AI service layer | Planned |
-| 6 | Sidebar and app layout | Planned |
-| 7 | AI chat | Planned |
-| 8 | Mood tracker | Planned |
-| 9 | Daily journal | Planned |
-| 10 | Healthy habits | Planned |
-| 11 | Daily report | Planned |
-| 12 | Emergency support | Planned |
-| 13 | Notifications | Planned |
-| 14 | Settings | Planned |
-| 15 | Export and import | Planned |
-| 16 | Final polish | Planned |
+| # | Module | # | Module |
+|---|---|---|---|
+| 1 | Project setup and data layer | 9 | Daily journal |
+| 2 | Design system | 10 | Healthy habits |
+| 3 | Landing page | 11 | Daily report |
+| 4 | Setup wizard | 12 | Emergency support |
+| 5 | AI service layer | 13 | Notifications |
+| 6 | Sidebar and app layout | 14 | Settings |
+| 7 | AI chat | 15 | Export and import |
+| 8 | Mood tracker | 16 | Final polish |
+
+## Routes
+
+| Route | What it is |
+|---|---|
+| `/` | Landing page |
+| `/setup` | First-run wizard: provider, key, model |
+| `/app` | Today at a glance |
+| `/app/chat` | Streaming AI conversation |
+| `/app/mood` | One check-in a day, with a calendar and streak |
+| `/app/journal` | Autosaving daily entry and history |
+| `/app/habits` | Daily checklist, custom habits, 30-day heatmap |
+| `/app/report` | How a given day went |
+| `/app/support` | Crisis resources and grounding techniques |
+| `/app/settings` | Provider, model, notifications, export and import |
+| `/design` | Living design-system reference |
 
 ## Tech stack
 

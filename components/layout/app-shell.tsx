@@ -19,6 +19,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useSettings } from "@/hooks/use-settings";
+import { NotificationScheduler } from "@/features/notifications";
 
 /**
  * The frame every in-app screen sits in: a fixed sidebar on desktop, a sheet on
@@ -44,6 +45,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[17rem_1fr]">
+      {/* Renders nothing; owns the daily reminder timers while the app is open. */}
+      <NotificationScheduler />
       {/* ------------------------------ Desktop --------------------------- */}
       <aside className="bg-sidebar border-sidebar-border hidden border-r lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
         <div className="px-5 py-6">
