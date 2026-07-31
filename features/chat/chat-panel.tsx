@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircleHeart, Sparkles, Trash2, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -75,7 +76,13 @@ export function ChatPanel() {
 
   // Destructured because `useSpeech` returns a fresh object each render — the
   // individual callbacks are stable, the object is not.
-  const { supported: canSpeak, speaking, speak, stop: stopSpeaking } = useSpeech();
+  const {
+    supported: canSpeak,
+    speaking,
+    spokenAs,
+    speak,
+    stop: stopSpeaking,
+  } = useSpeech();
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const spokenRef = useRef<string | null>(null);
   const lastAssistant = lastAssistantIndex === -1 ? null : chat.messages[lastAssistantIndex];
@@ -399,6 +406,18 @@ export function ChatPanel() {
               onStartLive={() => void toggleLive()}
             />
           )}
+
+          {/* Owning up beats sounding broken. Without this the fallback reads as
+              a terrible Tamil voice rather than a missing one. */}
+          {spokenAs?.romanised ? (
+            <p className="type-caption text-center text-xs">
+              No Tamil voice on this device, so Tamil is being read with an English one.{" "}
+              <Link href="/app/settings" className="underline underline-offset-2">
+                Settings
+              </Link>{" "}
+              explains how to add a proper one.
+            </p>
+          ) : null}
 
           <p className="type-caption text-center text-xs">
             MindCareAI is a wellbeing companion, not a therapist or emergency service.

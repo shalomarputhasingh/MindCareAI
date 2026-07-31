@@ -132,23 +132,48 @@ export function LanguageCard() {
           <p className="text-muted-foreground flex items-start gap-2 text-xs">
             <Volume2 aria-hidden className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              Replies are read aloud in whichever language they arrive in — a Tamil reply
-              picks a Tamil voice from your device, whatever you chose under Voice.
+              Replies are read aloud in whichever language they arrive in. A Tamil reply
+              picks a Tamil voice from your device{tamilVoiceMissing ? "" : ", whatever you chose under Voice"}
+              {tamilVoiceMissing ? " — if there is one, which there isn't here" : ""}.
             </span>
           </p>
 
           {tamilVoiceMissing ? (
-            <p className="text-muted-foreground flex items-start gap-2 text-xs">
-              <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-              <span>
-                <strong className="text-foreground font-medium">
-                  This device has no Tamil voice installed
-                </strong>
-                , so Tamil replies can&apos;t be read aloud properly. Everything else works
-                — add a Tamil voice in your operating system&apos;s speech settings if you
-                want them spoken.
-              </span>
-            </p>
+            <div className="border-border space-y-2 rounded-md border border-dashed p-3">
+              <p className="text-muted-foreground flex items-start gap-2 text-xs">
+                <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                <span>
+                  <strong className="text-foreground font-medium">
+                    This device has no Tamil voice installed.
+                  </strong>{" "}
+                  Tamil replies are still read aloud, but they are rewritten in English
+                  letters first and spoken by an English voice — understandable, and
+                  clearly not a Tamil accent. Adding a real voice is a one-off:
+                </span>
+              </p>
+              <ul className="text-muted-foreground ml-[1.375rem] list-disc space-y-1 pl-3 text-xs">
+                <li>
+                  <strong className="text-foreground font-medium">Windows</strong> —
+                  Settings → Time &amp; language → Language &amp; region → Add a language →
+                  Tamil, and tick Speech before installing.
+                </li>
+                <li>
+                  <strong className="text-foreground font-medium">macOS &amp; iOS</strong> —
+                  System Settings → Accessibility → Spoken Content → System Voice → Manage
+                  Voices → Tamil.
+                </li>
+                <li>
+                  <strong className="text-foreground font-medium">Android</strong> —
+                  Settings → System → Languages &amp; input → Text-to-speech → install the
+                  Tamil voice data.
+                </li>
+              </ul>
+              <p className="text-muted-foreground ml-[1.375rem] text-xs">
+                Restart your browser afterwards. If Tamil still doesn&apos;t appear in the
+                voice list above, try a different browser — they don&apos;t all read the
+                same set of system voices.
+              </p>
+            </div>
           ) : null}
         </div>
       </div>

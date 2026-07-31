@@ -26,7 +26,7 @@ const FAQS = [
   {
     question: "Can I talk to it in Tamil?",
     answer:
-      "Yes. Write in Tamil and you'll be answered in Tamil — everyday spoken Tamil, not the formal written kind. Tamil typed in English letters works too, and the reply comes back the same way rather than in Tamil script you didn't ask for. You can also pin it to Tamil or English in Settings → Language. Voice works in Tamil as well, though the browser's own recogniser listens for one language at a time, so you'll want to choose Tamil there, or switch on cloud transcription, which works it out for itself. The app's own buttons and labels are English throughout — this is about the conversation, not a translated interface.",
+      "Yes. Write in Tamil and you'll be answered in Tamil — everyday spoken Tamil, not the formal written kind. Tamil typed in English letters works too, and the reply comes back the same way rather than in Tamil script you didn't ask for. You can also pin it to Tamil or English in Settings → Language. Voice works in Tamil as well, though the browser's own recogniser listens for one language at a time, so you'll want to choose Tamil there, or switch on cloud transcription, which works it out for itself. Reading Tamil aloud needs a Tamil voice installed on your device — most machines don't have one out of the box, so until you add it the Tamil is written out in English letters and spoken by an English voice, which is understandable but plainly not a Tamil accent. The app's own buttons and labels are English throughout — this is about the conversation, not a translated interface.",
   },
   {
     question: "Do I need an API key?",

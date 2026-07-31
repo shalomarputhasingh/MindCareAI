@@ -79,8 +79,9 @@ never written to a temporary file, and never included in an exported backup. As 
 
 **Read aloud (text to speech).** Uses the operating system's own `speechSynthesis` voices.
 No key, no network request, and nothing uploaded — including for Tamil, which is read by
-whatever Tamil voice the device already has, not by a service. If it has none, the reply is
-shown but not spoken; nothing is fetched to make up the difference. Auto-read is suppressed while the crisis
+whatever Tamil voice the device already has, not by a service. If it has none, the Tamil is
+rewritten in Latin letters locally and spoken by an English voice, and the app says so on
+screen. Nothing is fetched or uploaded to make up the difference. Auto-read is suppressed while the crisis
 support screen is showing — a support message spoken by a synthetic voice is not something
 to hand someone unprompted. This holds in live voice chat too: the reply appears on screen
 but is not read out, and the session is left running rather than cut off mid-conversation.

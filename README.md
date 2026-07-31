@@ -79,7 +79,10 @@ adding it.
   any exported backup.
 - **Tamil, as well as English.** By default the assistant answers in whichever language
   you wrote in, including Tamil typed in English letters, and you can pin it to one
-  language in Settings → Language. The interface itself stays in English.
+  language in Settings → Language. The interface itself stays in English. Replies are read
+  aloud with a Tamil voice if the device has one; if not, the Tamil is romanised locally
+  and spoken by an English voice rather than falling silent, and Settings explains how to
+  install a real one.
 - **Voice is opt-in, and says where it goes.** Push-to-talk dictation runs only while you
   hold the mic open, and the transcript lands in the message box for you to read and edit
   before it is sent. Live voice chat is a separate mode you enter deliberately: the

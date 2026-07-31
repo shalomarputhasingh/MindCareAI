@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { primarySubtag } from "@/lib/language";
+import { romaniseTamil } from "@/lib/tamil-romanisation";
 
 /**
  * Reads text aloud with the browser's own speech synthesis.
@@ -77,10 +78,40 @@ export function hasVoiceFor(voices: SpeechSynthesisVoice[], lang: string): boole
   return voices.some((voice) => primarySubtag(voice.lang) === wanted);
 }
 
+/**
+ * The voice to read romanised Tamil with, when no Tamil voice exists.
+ *
+ * Indian English first: it already has the retroflex consonants and the vowel
+ * values Tamil needs, so "enakku" comes out close to right, where a British or
+ * American voice flattens it. Failing that, anything English; failing that,
+ * whatever the person already chose.
+ */
+function pickRomanisedVoice(
+  voices: SpeechSynthesisVoice[],
+  voiceURI?: string,
+): SpeechSynthesisVoice | null {
+  const english = voices.filter((v) => primarySubtag(v.lang) === "en");
+  const indian = english.filter((v) => /[-_]IN$/i.test(v.lang));
+  const pool = indian.length > 0 ? indian : english;
+  if (pool.length > 0) return pool.find((v) => v.localService) ?? pool[0];
+  return voices.find((v) => v.voiceURI === voiceURI) ?? null;
+}
+
+/** How a reply ended up being spoken, for the UI to be honest about. */
+export interface SpokenAs {
+  /** The language actually used, which may not be the one asked for. */
+  lang: string;
+  /** True when Tamil was rewritten in Latin letters to get it spoken at all. */
+  romanised: boolean;
+}
+
 export function useSpeech() {
   const [supported, setSupported] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  // How the last utterance was actually spoken, so the UI can own up when it
+  // had to fall back rather than letting it look like a bad Tamil voice.
+  const [spokenAs, setSpokenAs] = useState<SpokenAs | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
@@ -116,16 +147,32 @@ export function useSpeech() {
       // Only one thing talks at a time; a new reply replaces the last.
       window.speechSynthesis.cancel();
 
-      const utterance = new SpeechSynthesisUtterance(spoken);
-      utterance.rate = options?.rate ?? 0.95;
-      if (options?.lang) utterance.lang = options.lang;
+      const available = window.speechSynthesis.getVoices();
+      const wanted = options?.lang;
+      let voice = pickVoice(available, options?.voiceURI, wanted);
+      let toSay = spoken;
+      let lang = wanted ?? "";
+      let romanised = false;
 
-      const voice = pickVoice(
-        window.speechSynthesis.getVoices(),
-        options?.voiceURI,
-        options?.lang,
-      );
+      // No voice for this language. Left alone the engine simply says nothing,
+      // which is the worst of the options — so Tamil is rewritten in Latin
+      // letters and handed to an English voice. It is not a good Tamil accent,
+      // but it is speech, and the UI says plainly that this is what happened.
+      if (wanted && !voice && primarySubtag(wanted) === "ta") {
+        const fallback = pickRomanisedVoice(available, options?.voiceURI);
+        if (fallback) {
+          voice = fallback;
+          toSay = romaniseTamil(spoken);
+          lang = fallback.lang;
+          romanised = true;
+        }
+      }
+
+      const utterance = new SpeechSynthesisUtterance(toSay);
+      utterance.rate = options?.rate ?? 0.95;
+      if (lang) utterance.lang = lang;
       if (voice) utterance.voice = voice;
+      setSpokenAs({ lang, romanised });
 
       utterance.onend = () => {
         utteranceRef.current = null;
@@ -143,5 +190,5 @@ export function useSpeech() {
     [],
   );
 
-  return { supported, speaking, voices, speak, stop };
+  return { supported, speaking, voices, spokenAs, speak, stop };
 }
