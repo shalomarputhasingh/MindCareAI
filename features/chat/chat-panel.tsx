@@ -25,6 +25,7 @@ import { ChatComposer } from "./chat-composer";
 import { MessageBubble, TypingIndicator } from "./message-bubble";
 import { SupportBanner } from "./support-banner";
 import { useChat } from "./use-chat";
+import { useSpeech } from "./use-speech";
 
 const OPENERS = [
   "I've had a long day and I'm not sure why it got to me.",
@@ -64,6 +65,67 @@ export function ChatPanel() {
   const lastAssistantIndex = chat.messages.findLastIndex(
     (message) => message.role === "assistant",
   );
+
+  /* ------------------------------- Read aloud ------------------------------ */
+
+  // Destructured because `useSpeech` returns a fresh object each render — the
+  // individual callbacks are stable, the object is not.
+  const { supported: canSpeak, speaking, speak, stop: stopSpeaking } = useSpeech();
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const spokenRef = useRef<string | null>(null);
+  const lastAssistant = lastAssistantIndex === -1 ? null : chat.messages[lastAssistantIndex];
+  const { voiceURI, rate, speakReplies } = settings.voice;
+
+  const speakMessage = useCallback(
+    (id: string, content: string) => {
+      setSpeakingId(id);
+      speak(content, { voiceURI, rate });
+    },
+    [speak, voiceURI, rate],
+  );
+
+  // Never leave a stale highlight once the utterance ends on its own.
+  useEffect(() => {
+    if (!speaking) setSpeakingId(null);
+  }, [speaking]);
+
+  // Stored history is marked as already-heard, so opening the page doesn't
+  // start reading yesterday's conversation out loud.
+  useEffect(() => {
+    if (chat.loadedHistory && spokenRef.current === null) {
+      spokenRef.current = lastAssistant?.id ?? "";
+    }
+  }, [chat.loadedHistory, lastAssistant?.id]);
+
+  useEffect(() => {
+    if (!speakReplies || !canSpeak) return;
+    if (!chat.loadedHistory || spokenRef.current === null) return;
+    if (busy || !lastAssistant || lastAssistant.id === spokenRef.current) return;
+
+    spokenRef.current = lastAssistant.id;
+
+    // A synthetic voice reading a crisis response aloud can land badly. If the
+    // support screen has tripped, the reply stays on the page only.
+    if (chat.showSupport) return;
+
+    speakMessage(lastAssistant.id, lastAssistant.content);
+  }, [
+    speakReplies,
+    canSpeak,
+    chat.loadedHistory,
+    chat.showSupport,
+    busy,
+    lastAssistant,
+    speakMessage,
+  ]);
+
+  // Silence anything in flight when the conversation is cleared.
+  useEffect(() => {
+    if (!hasConversation) {
+      spokenRef.current = chat.loadedHistory ? "" : null;
+      stopSpeaking();
+    }
+  }, [hasConversation, chat.loadedHistory, stopSpeaking]);
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem)] flex-col lg:h-dvh">
@@ -157,6 +219,10 @@ export function ChatPanel() {
               message={message}
               canRegenerate={index === lastAssistantIndex && !busy}
               onRegenerate={() => void chat.regenerate()}
+              canSpeak={canSpeak}
+              isSpeaking={speaking && speakingId === message.id}
+              onSpeak={() => speakMessage(message.id, message.content)}
+              onStopSpeaking={stopSpeaking}
             />
           ))}
 

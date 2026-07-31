@@ -24,14 +24,31 @@ export function useSettings() {
     [setValue],
   );
 
+  /** Patches the nested voice block without disturbing the rest of settings. */
+  const updateVoice = useCallback(
+    (patch: Partial<AppSettings["voice"]>) =>
+      setValue((current) => ({
+        ...current,
+        voice: { ...DEFAULT_SETTINGS.voice, ...current?.voice, ...patch },
+      })),
+    [setValue],
+  );
+
   const reset = useCallback(() => setValue(DEFAULT_SETTINGS), [setValue]);
 
-  // Merged so settings saved by an older build still get new defaults.
-  const settings: AppSettings = { ...DEFAULT_SETTINGS, ...value };
+  // Merged so settings saved by an older build still get new defaults. `voice`
+  // is merged a level deeper, or a stored object written before it existed
+  // would leave its fields undefined.
+  const settings: AppSettings = {
+    ...DEFAULT_SETTINGS,
+    ...value,
+    voice: { ...DEFAULT_SETTINGS.voice, ...value?.voice },
+  };
 
   return {
     settings,
     update,
+    updateVoice,
     reset,
     hydrated,
     /** True once a provider, key and model are all present. */

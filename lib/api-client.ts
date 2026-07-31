@@ -199,6 +199,43 @@ export const backupApi = {
 
 /* ------------------------------- Provider --------------------------------- */
 
+export const voiceApi = {
+  /**
+   * Uploads a recording and returns what was heard.
+   *
+   * Multipart rather than JSON, so the audio isn't inflated by base64 on the
+   * way to a route handler running on this same machine.
+   */
+  transcribe: async (
+    provider: Provider,
+    apiKey: string,
+    audio: Blob,
+    model?: string,
+    signal?: AbortSignal,
+  ): Promise<string> => {
+    const form = new FormData();
+    form.append("audio", audio, "speech");
+    form.append("provider", provider);
+    form.append("apiKey", apiKey);
+    if (model) form.append("model", model);
+
+    let response: Response;
+    try {
+      response = await fetch("/api/transcribe", { method: "POST", body: form, signal });
+    } catch {
+      throw new ApiError("Couldn't reach the app's local server. Is it still running?");
+    }
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new ApiError(body?.error ?? "That recording couldn't be transcribed.");
+    }
+
+    const body = (await response.json()) as { text: string };
+    return body.text;
+  },
+};
+
 export const providerApi = {
   models: (provider: Provider, apiKey: string) =>
     request<{ models: AiModel[] }>("/api/models", {

@@ -13,6 +13,7 @@ export { AiError } from "./types";
 export type { AiMessage, AiRequest } from "./types";
 export { buildSystemPrompt, type LocalContext } from "./system-prompt";
 export { detectsCrisis } from "./safety";
+export { supportsTranscription, transcribe, type TranscribeRequest } from "./voice";
 
 /**
  * The unified AI service.

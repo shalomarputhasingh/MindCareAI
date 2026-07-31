@@ -76,6 +76,12 @@ adding it.
   never logged and never committed.
 - **Nothing personal is committed.** `.gitignore` excludes `.env`, the database file and
   any exported backup.
+- **Voice is opt-in, and says where it goes.** Dictation only runs while you hold the mic
+  open, and the transcript lands in the message box for you to read and edit before it is
+  sent. By default the browser's own recogniser does the work; turning on cloud
+  transcription in Settings uploads the recording to your chosen provider instead. Either
+  way the audio is never written to disk. Replies read aloud use your device's built-in
+  voices and are never uploaded.
 
 ## Project structure
 

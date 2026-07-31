@@ -29,7 +29,7 @@ const POINTS: Point[] = [
     icon: KeyRound,
     title: "Your own AI key",
     description:
-      "Bring a key from OpenRouter, Groq or Gemini. Chat messages go straight from your device to that provider, using your key.",
+      "Bring a key from OpenRouter, Groq or Gemini. Chat messages — and dictation, if you switch that on — go straight from your device to that provider, using your key.",
   },
 ];
 

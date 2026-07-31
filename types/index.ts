@@ -29,6 +29,25 @@ export interface AiModel {
   description?: string;
 }
 
+/**
+ * Voice preferences.
+ *
+ * `cloudInput` is opt-in and off by default, because transcription is the one
+ * feature in this app that sends the user's own words off the machine. Output
+ * runs through the browser's on-device speech synthesis, so it costs nothing
+ * and sends nothing.
+ */
+export interface VoiceSettings {
+  /** Allow audio to be uploaded to the chosen provider for transcription. */
+  cloudInput: boolean;
+  /** Read assistant replies aloud. */
+  speakReplies: boolean;
+  /** `SpeechSynthesisVoice.voiceURI`, or "" for the browser default. */
+  voiceURI: string;
+  /** Playback rate, 0.5–1.5. Slightly under 1 suits this app. */
+  rate: number;
+}
+
 /** Settings live entirely in localStorage — the API key never touches disk. */
 export interface AppSettings {
   provider: Provider | null;
@@ -38,6 +57,7 @@ export interface AppSettings {
   maxTokens: number;
   /** Set once the setup wizard has been completed. */
   onboarded: boolean;
+  voice: VoiceSettings;
 }
 
 /* -------------------------------------------------------------------------- */

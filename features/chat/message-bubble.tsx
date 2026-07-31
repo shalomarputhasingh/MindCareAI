@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, RotateCcw } from "lucide-react";
+import { Check, Copy, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useState } from "react";
 
 import { BrandMark } from "@/components/layout/brand-mark";
@@ -16,12 +16,24 @@ interface MessageBubbleProps {
   /** Shown only on the newest assistant message. */
   canRegenerate?: boolean;
   onRegenerate?: () => void;
+  /**
+   * Read-aloud wiring. Owned by the panel rather than the bubble so one
+   * utterance is in flight at a time and history isn't re-read on mount.
+   */
+  canSpeak?: boolean;
+  isSpeaking?: boolean;
+  onSpeak?: () => void;
+  onStopSpeaking?: () => void;
 }
 
 export function MessageBubble({
   message,
   canRegenerate = false,
   onRegenerate,
+  canSpeak = false,
+  isSpeaking = false,
+  onSpeak,
+  onStopSpeaking,
 }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
@@ -68,6 +80,8 @@ export function MessageBubble({
           className={cn(
             "flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100",
             isUser && "justify-end",
+            // Keep the stop control reachable while the reply is being read out.
+            isSpeaking && "opacity-100",
           )}
         >
           <Tooltip>
@@ -87,6 +101,26 @@ export function MessageBubble({
             </TooltipTrigger>
             <TooltipContent>{copied ? "Copied" : "Copy message"}</TooltipContent>
           </Tooltip>
+
+          {canSpeak && !isUser ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={isSpeaking ? onStopSpeaking : onSpeak}
+                  aria-label={isSpeaking ? "Stop reading aloud" : "Read this aloud"}
+                >
+                  {isSpeaking ? (
+                    <Square className="text-brand-strong size-3 fill-current" />
+                  ) : (
+                    <Volume2 className="size-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isSpeaking ? "Stop" : "Read aloud"}</TooltipContent>
+            </Tooltip>
+          ) : null}
 
           {canRegenerate && onRegenerate ? (
             <Tooltip>

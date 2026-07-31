@@ -4,6 +4,7 @@ import type {
   MoodScore,
   NotificationPreferences,
   Provider,
+  VoiceSettings,
 } from "@/types";
 
 /** Every localStorage key the app writes, in one place. */
@@ -27,6 +28,20 @@ export const APP_DESCRIPTION =
 export const DISCLAIMER =
   "MindCareAI is a wellbeing companion, not a medical service. It is not a therapist, doctor or emergency service, and it is not a substitute for professional help.";
 
+/**
+ * Voice defaults. Cloud transcription starts off: it is the one thing here that
+ * would send the user's own words off this machine, so it has to be chosen
+ * rather than discovered. Speaking replies is on-device and free, but it stays
+ * off too, because audio starting unprompted is startling.
+ */
+export const DEFAULT_VOICE: VoiceSettings = {
+  cloudInput: false,
+  speakReplies: false,
+  voiceURI: "",
+  // A shade under natural pace. This app should never sound hurried.
+  rate: 0.95,
+};
+
 export const DEFAULT_SETTINGS: AppSettings = {
   provider: null,
   apiKey: "",
@@ -36,6 +51,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   // tight budget can be used up before a single word of the reply appears.
   maxTokens: 2048,
   onboarded: false,
+  voice: DEFAULT_VOICE,
 };
 
 /** Display metadata for each supported provider. */

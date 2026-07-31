@@ -16,7 +16,12 @@ const FAQS = [
   {
     question: "Where does my data go?",
     answer:
-      "It stays on your computer. Journal entries, moods, habits and chat history are written to a SQLite file on this machine, and your API key and settings live in this browser. There's no account and no MindCareAI server, so nothing is uploaded and nobody else can read any of it.",
+      "It stays on your computer. Journal entries, moods, habits and chat history are written to a SQLite file on this machine, and your API key and settings live in this browser. There's no account and no MindCareAI server. The two exceptions are things you ask for: chat messages go to the AI provider you chose, and if you switch on cloud dictation, that recording is uploaded there too.",
+  },
+  {
+    question: "What happens when I use the microphone?",
+    answer:
+      "Dictation is off until you press the mic, and you always read the transcript before it sends. By default your browser does the listening. If you turn on cloud transcription in Settings, the recording is uploaded to your AI provider instead — more accurate, but the audio leaves this machine. It's never saved to disk either way. Replies read aloud use your device's own voices and are never uploaded.",
   },
   {
     question: "Do I need an API key?",
