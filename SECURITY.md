@@ -37,10 +37,10 @@ Voice is the one feature that can put your own recorded speech on the network, s
 off until you turn it on and the app states where the audio goes at the moment it is
 recording.
 
-**Dictation (speech to text).** The microphone only opens while you deliberately start a
-recording, a recording indicator is shown for as long as it is open, and the resulting
-transcript is placed in the message box for you to read and correct — it is never sent
-automatically. There are two backends:
+**Push-to-talk dictation (speech to text).** The microphone only opens while you
+deliberately start a recording, a recording indicator is shown for as long as it is open,
+and the resulting transcript is placed in the message box for you to read and correct — it
+is never sent automatically. There are two backends:
 
 - *Browser recogniser* (the default). Handled by the Web Speech API. Note that this is not
   automatically on-device: Chrome and Edge send the audio to their vendor's speech service,
@@ -52,14 +52,31 @@ automatically. There are two backends:
   then subject to that provider's retention policy. Nothing else in the app sends audio
   anywhere.
 
-In both cases the recording is held in memory only. It is never written to `prisma/dev.db`,
+**Live voice chat.** A separate, explicitly entered mode in which the conversation runs
+hands-free. It differs from push-to-talk in two ways that matter:
+
+- **The microphone stays open** for the whole session, not just while a button is held.
+  The panel says so continuously, and ending the session releases the microphone track
+  immediately. It is also released if you navigate away.
+- **Each turn sends as soon as you stop speaking.** Nothing is reviewed first — that is
+  what hands-free means, and it is the trade-off you accept by entering the mode. The
+  panel shows the text of every turn it heard, so a mishearing is at least visible after
+  the fact, and the session can be ended mid-sentence.
+
+Turn boundaries are detected locally, by measuring loudness against the room's own noise
+floor; the audio itself is only sent once a turn has ended, and only in cloud mode. While
+the assistant is speaking, capture is suspended so its own voice is never transcribed, and
+the detector watches only for a much louder sound so you can interrupt it.
+
+In every case the recording is held in memory only. It is never written to `prisma/dev.db`,
 never written to a temporary file, and never included in an exported backup. As with
 `/api/chat`, the transcription route never logs the request, because it carries your key.
 
 **Read aloud (text to speech).** Uses the operating system's own `speechSynthesis` voices.
 No key, no network request, and nothing uploaded. Auto-read is suppressed while the crisis
 support screen is showing — a support message spoken by a synthetic voice is not something
-to hand someone unprompted.
+to hand someone unprompted. This holds in live voice chat too: the reply appears on screen
+but is not read out, and the session is left running rather than cut off mid-conversation.
 
 ## Before you commit
 

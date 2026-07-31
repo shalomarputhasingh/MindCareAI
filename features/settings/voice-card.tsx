@@ -153,7 +153,7 @@ export function VoiceCard() {
                 <Label htmlFor="voice-speak-replies">Read replies aloud</Label>
                 <p className="type-caption text-xs">
                   {speechSupported
-                    ? "Spoken by your device — nothing is sent anywhere. Quiet during a support message."
+                    ? "Spoken by your device — nothing is sent anywhere. Quiet during a support message, and always on in live voice chat."
                     : "This browser has no speech voices installed."}
                 </p>
               </div>

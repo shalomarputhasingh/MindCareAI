@@ -48,7 +48,7 @@ export function ProviderCard({ provider, selected, onSelect }: ProviderCardProps
         target="_blank"
         rel="noreferrer"
         onClick={(event) => event.stopPropagation()}
-        className="text-primary-strong mt-1 inline-flex w-fit items-center gap-1 text-xs font-medium hover:underline"
+        className="text-primary-strong -mb-1 mt-0.5 inline-flex w-fit items-center gap-1 py-1.5 text-xs font-medium hover:underline"
       >
         Get a key
         <ExternalLink className="size-3" aria-hidden />

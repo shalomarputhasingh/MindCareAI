@@ -37,12 +37,14 @@ export function SiteFooter() {
               <p className="type-caption text-xs font-semibold tracking-wide uppercase">
                 {group.title}
               </p>
-              <ul className="space-y-2">
+              {/* Padding rather than margin, so each row is a comfortable tap
+                  target on a phone without loosening the visual rhythm. */}
+              <ul className="-my-1.5">
                 {group.links.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+                      className="text-muted-foreground hover:text-foreground inline-block py-1.5 text-sm transition-colors"
                     >
                       {link.label}
                     </Link>

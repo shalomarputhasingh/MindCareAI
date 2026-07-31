@@ -21,7 +21,7 @@ const FAQS = [
   {
     question: "What happens when I use the microphone?",
     answer:
-      "Dictation is off until you press the mic, and you always read the transcript before it sends. By default your browser does the listening. If you turn on cloud transcription in Settings, the recording is uploaded to your AI provider instead — more accurate, but the audio leaves this machine. It's never saved to disk either way. Replies read aloud use your device's own voices and are never uploaded.",
+      "Nothing until you ask. Press the mic once and it's push-to-talk: you read the transcript and edit it before it sends. Live voice chat is a separate mode you start deliberately — there the microphone stays open and each turn sends as soon as you pause, so nothing is reviewed first. Either way, your browser does the listening by default; turn on cloud transcription in Settings and the recording goes to your AI provider instead, which is more accurate but does leave this machine. The audio is never saved to disk. Replies read aloud use your device's own voices and are never uploaded.",
   },
   {
     question: "Do I need an API key?",

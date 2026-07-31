@@ -6,45 +6,12 @@ import { supportsTranscription } from "@/lib/ai/voice";
 import { voiceApi } from "@/lib/api-client";
 import type { Provider } from "@/types";
 
-/* -------------------------------------------------------------------------- */
-/*                    Minimal Web Speech API declarations                     */
-/* -------------------------------------------------------------------------- */
-/* Not in the standard DOM lib, and we only touch a handful of members.        */
-
-interface SpeechRecognitionAlternativeLike {
-  transcript: string;
-}
-interface SpeechRecognitionResultLike {
-  0: SpeechRecognitionAlternativeLike;
-  isFinal: boolean;
-  length: number;
-}
-interface SpeechRecognitionEventLike {
-  results: { length: number; [index: number]: SpeechRecognitionResultLike };
-}
-interface SpeechRecognitionLike {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  start(): void;
-  stop(): void;
-  abort(): void;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: ((event: { error?: string }) => void) | null;
-  onend: (() => void) | null;
-}
-type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
-
-function getRecognitionCtor(): SpeechRecognitionCtor | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    SpeechRecognition?: SpeechRecognitionCtor;
-    webkitSpeechRecognition?: SpeechRecognitionCtor;
-  };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
-
-/* -------------------------------------------------------------------------- */
+import {
+  getRecognitionCtor,
+  hasRecorderSupport,
+  pickMimeType,
+  type SpeechRecognitionLike,
+} from "./speech-api";
 
 export type VoiceInputStatus =
   | "unsupported"
@@ -55,19 +22,6 @@ export type VoiceInputStatus =
 
 /** Where the audio goes. Surfaced in the UI so it is never a surprise. */
 export type VoiceInputMode = "cloud" | "browser" | "none";
-
-/** Preference order for MediaRecorder output; Whisper accepts all of these. */
-const PREFERRED_MIME_TYPES = [
-  "audio/webm;codecs=opus",
-  "audio/webm",
-  "audio/ogg;codecs=opus",
-  "audio/mp4",
-];
-
-function pickMimeType(): string | undefined {
-  if (typeof MediaRecorder === "undefined") return undefined;
-  return PREFERRED_MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type));
-}
 
 interface UseVoiceInputOptions {
   provider: Provider | null;
@@ -111,11 +65,7 @@ export function useVoiceInput({
   // Capability detection happens after mount — `window` isn't there on the server.
   useEffect(() => {
     setBrowserAvailable(getRecognitionCtor() !== null);
-    setRecorderAvailable(
-      typeof MediaRecorder !== "undefined" &&
-        typeof navigator !== "undefined" &&
-        Boolean(navigator.mediaDevices?.getUserMedia),
-    );
+    setRecorderAvailable(hasRecorderSupport());
   }, []);
 
   const canUseCloud =

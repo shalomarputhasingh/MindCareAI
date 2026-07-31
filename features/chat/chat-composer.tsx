@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Loader2, Mic, Square, X } from "lucide-react";
+import { ArrowUp, AudioLines, Loader2, Mic, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ interface ChatComposerProps {
   busy: boolean;
   disabled?: boolean;
   placeholder?: string;
+  /** Hands off to the hands-free panel. Omitted where live mode isn't offered. */
+  onStartLive?: () => void;
 }
 
 const MAX_HEIGHT = 200;
@@ -27,6 +29,7 @@ export function ChatComposer({
   busy,
   disabled = false,
   placeholder = "What's on your mind?",
+  onStartLive,
 }: ChatComposerProps) {
   const [value, setValue] = useState("");
   const [justDictated, setJustDictated] = useState(false);
@@ -174,6 +177,24 @@ export function ChatComposer({
               </TooltipContent>
             </Tooltip>
           )
+        ) : null}
+
+        {voice.available && onStartLive && !busy && !recording ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                disabled={disabled || transcribing}
+                onClick={onStartLive}
+                aria-label="Start live voice chat"
+              >
+                <AudioLines className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Live voice chat — hands-free</TooltipContent>
+          </Tooltip>
         ) : null}
 
         {busy ? (

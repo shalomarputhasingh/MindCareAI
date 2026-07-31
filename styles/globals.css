@@ -183,6 +183,10 @@
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
 
+  /* Small phones — 320 to 383px — where labels have to give way. Tailwind's
+     own scale starts at 40rem, which is far too late for a 320px screen. */
+  --breakpoint-xs: 24rem;
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", monospace;

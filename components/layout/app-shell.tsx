@@ -66,7 +66,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* ------------------------------- Mobile --------------------------- */}
       <div className="flex min-w-0 flex-col">
-        <header className="bg-background/85 border-border sticky top-0 z-30 flex items-center justify-between gap-3 border-b px-4 py-3 backdrop-blur-md lg:hidden">
+        {/* Exactly 3.5rem tall: the chat screen sizes itself against this, and
+            padding alone left it 60px, which pushed the composer off-screen. */}
+        <header className="bg-background/85 border-border sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b px-4 backdrop-blur-md lg:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Open navigation">

@@ -3,7 +3,6 @@
 import { MessageCircleHeart, Sparkles, Trash2, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { PageHeader } from "@/components/shared/page-header";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,9 +21,11 @@ import { useGuestId } from "@/hooks/use-guest-id";
 import { useSettings } from "@/hooks/use-settings";
 
 import { ChatComposer } from "./chat-composer";
+import { LiveVoicePanel, type LivePhase } from "./live-voice-panel";
 import { MessageBubble, TypingIndicator } from "./message-bubble";
 import { SupportBanner } from "./support-banner";
 import { useChat } from "./use-chat";
+import { useLiveVoice } from "./use-live-voice";
 import { useSpeech } from "./use-speech";
 
 const OPENERS = [
@@ -38,6 +39,7 @@ export function ChatPanel() {
   const guestId = useGuestId();
   const { settings, isConfigured, hydrated } = useSettings();
   const [useContext, setUseContext] = useState(true);
+  const [liveOn, setLiveOn] = useState(false);
 
   const chat = useChat({ guestId, settings, useContext });
 
@@ -75,6 +77,9 @@ export function ChatPanel() {
   const spokenRef = useRef<string | null>(null);
   const lastAssistant = lastAssistantIndex === -1 ? null : chat.messages[lastAssistantIndex];
   const { voiceURI, rate, speakReplies } = settings.voice;
+  // Live mode is a spoken conversation, so replies are always read back — the
+  // settings toggle only governs typed chat.
+  const shouldSpeakReplies = speakReplies || liveOn;
 
   const speakMessage = useCallback(
     (id: string, content: string) => {
@@ -98,7 +103,7 @@ export function ChatPanel() {
   }, [chat.loadedHistory, lastAssistant?.id]);
 
   useEffect(() => {
-    if (!speakReplies || !canSpeak) return;
+    if (!shouldSpeakReplies || !canSpeak) return;
     if (!chat.loadedHistory || spokenRef.current === null) return;
     if (busy || !lastAssistant || lastAssistant.id === spokenRef.current) return;
 
@@ -110,7 +115,7 @@ export function ChatPanel() {
 
     speakMessage(lastAssistant.id, lastAssistant.content);
   }, [
-    speakReplies,
+    shouldSpeakReplies,
     canSpeak,
     chat.loadedHistory,
     chat.showSupport,
@@ -127,32 +132,118 @@ export function ChatPanel() {
     }
   }, [hasConversation, chat.loadedHistory, stopSpeaking]);
 
+  /* ------------------------------- Live mode ------------------------------- */
+
+  const [lastHeard, setLastHeard] = useState<string | null>(null);
+  // A turn transcribed while the previous reply is still arriving would be
+  // dropped by `send`, so it waits here instead of being lost.
+  const pendingRef = useRef<string | null>(null);
+
+  const live = useLiveVoice({
+    provider: settings.provider,
+    apiKey: settings.apiKey,
+    model: settings.model,
+    cloudEnabled: settings.voice.cloudInput,
+    onUtterance: (text) => {
+      setLastHeard(text);
+      pendingRef.current = text;
+    },
+    onBargeIn: stopSpeaking,
+  });
+
+  const { start: startLive, stop: stopLive, pause: pauseLive, resume: resumeLive } = live;
+
+  // What we last asked the microphone to do, so the effect below doesn't
+  // re-issue the same instruction on every render.
+  const liveIntent = useRef<"off" | "listen" | "pause" | "barge">("off");
+
+  useEffect(() => {
+    if (!liveOn) {
+      liveIntent.current = "off";
+      return;
+    }
+    const want = busy ? "pause" : speaking ? "barge" : "listen";
+    if (want === liveIntent.current) return;
+    liveIntent.current = want;
+
+    if (want === "pause") pauseLive(false);
+    // Keep the detector running at a much higher bar while the reply plays, so
+    // it can be talked over.
+    else if (want === "barge") pauseLive(true);
+    else resumeLive();
+  }, [liveOn, busy, speaking, pauseLive, resumeLive]);
+
+  // Flush a queued turn the moment the conversation is free again.
+  useEffect(() => {
+    if (!liveOn || busy || !pendingRef.current) return;
+    const text = pendingRef.current;
+    pendingRef.current = null;
+    void chat.send(text);
+  }, [liveOn, busy, chat]);
+
+  async function toggleLive() {
+    if (liveOn) {
+      setLiveOn(false);
+      liveIntent.current = "off";
+      pendingRef.current = null;
+      stopLive();
+      stopSpeaking();
+      return;
+    }
+    setLastHeard(null);
+    setLiveOn(true);
+    liveIntent.current = "listen";
+    await startLive();
+  }
+
+  const livePhase: LivePhase =
+    live.state === "error"
+      ? "error"
+      : speaking
+        ? "speaking"
+        : busy
+          ? "thinking"
+          : live.state === "transcribing"
+            ? "transcribing"
+            : live.state === "hearing"
+              ? "hearing"
+              : live.state === "starting"
+                ? "starting"
+                : "listening";
+
   return (
     <div className="flex h-[calc(100dvh-3.5rem)] flex-col lg:h-dvh">
-      <div className="border-border border-b px-5 py-4 sm:px-8">
-        <PageHeader
-          title="AI Chat"
-          description="A private conversation that stays on this device."
-          actions={
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="use-context"
-                  checked={useContext}
-                  onCheckedChange={setUseContext}
-                />
-                <Label htmlFor="use-context" className="type-caption text-xs font-normal">
-                  Use today&apos;s notes
-                </Label>
-              </div>
+      {/* A compact single row on a phone: the full stacked header ate 169px of
+          a 568px screen, which pushed the live-mode controls off the bottom. */}
+      <div className="border-border shrink-0 border-b px-4 py-3 sm:px-8 sm:py-4">
+        <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="min-w-0 space-y-1.5">
+            <h1 className="type-title text-balance">AI Chat</h1>
+            <p className="type-caption hidden max-w-prose text-pretty sm:block">
+              A private conversation that stays on this device.
+            </p>
+          </div>
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="sm" disabled={!hasConversation}>
-                    <Trash2 className="size-4" />
-                    Clear
-                  </Button>
-                </AlertDialogTrigger>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="use-context"
+                checked={useContext}
+                onCheckedChange={setUseContext}
+              />
+              <Label htmlFor="use-context" className="type-caption text-xs font-normal">
+                <span className="sm:hidden">Notes</span>
+                <span className="hidden sm:inline">Use today&apos;s notes</span>
+              </Label>
+            </div>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={!hasConversation}>
+                  <Trash2 className="size-4" />
+                  <span className="hidden xs:inline">Clear</span>
+                </Button>
+              </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Clear this conversation?</AlertDialogTitle>
@@ -168,17 +259,19 @@ export function ChatPanel() {
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          }
-        />
+            </AlertDialog>
+          </div>
+        </header>
       </div>
 
       {/* ------------------------------ Messages ---------------------------- */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="scrollbar-slim flex-1 overflow-y-auto px-5 py-6 sm:px-8"
+        // `min-h-0` so this can actually shrink: without it the transcript area
+        // refuses to give ground and pushes the composer off the bottom of a
+        // short screen.
+        className="scrollbar-slim min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-8 sm:py-6"
       >
         <div className="mx-auto w-full max-w-4xl space-y-5">
           {!hasConversation && chat.loadedHistory && !busy ? (
@@ -246,7 +339,7 @@ export function ChatPanel() {
       </div>
 
       {/* ------------------------------ Composer ---------------------------- */}
-      <div className="border-border border-t px-5 py-4 sm:px-8">
+      <div className="border-border shrink-0 border-t px-4 py-3 sm:px-8 sm:py-4">
         <div className="mx-auto w-full max-w-4xl space-y-2.5">
           {chat.error ? (
             <div
@@ -272,12 +365,26 @@ export function ChatPanel() {
             </p>
           ) : null}
 
-          <ChatComposer
-            onSend={(text) => void chat.send(text)}
-            onStop={chat.stop}
-            busy={busy}
-            disabled={!isConfigured || !guestId}
-          />
+          {liveOn ? (
+            <LiveVoicePanel
+              phase={livePhase}
+              level={live.level}
+              partial={live.partial}
+              lastHeard={lastHeard}
+              usesCloud={live.usesCloud}
+              error={live.error}
+              onEnd={() => void toggleLive()}
+              onInterrupt={stopSpeaking}
+            />
+          ) : (
+            <ChatComposer
+              onSend={(text) => void chat.send(text)}
+              onStop={chat.stop}
+              busy={busy}
+              disabled={!isConfigured || !guestId}
+              onStartLive={() => void toggleLive()}
+            />
+          )}
 
           <p className="type-caption text-center text-xs">
             MindCareAI is a wellbeing companion, not a therapist or emergency service.

@@ -16,8 +16,8 @@ const SECTION_LINKS = [
 export function SiteHeader() {
   return (
     <header className="bg-background/85 border-border sticky top-0 z-40 border-b backdrop-blur-md">
-      <Container width="wide" className="flex h-16 items-center justify-between gap-4">
-        <Link href="/" className="rounded-lg">
+      <Container width="wide" className="flex h-16 items-center justify-between gap-2 sm:gap-4">
+        <Link href="/" className="min-w-0 rounded-lg">
           <BrandMark />
         </Link>
 
@@ -33,11 +33,11 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <ThemeToggle />
           <Button asChild size="sm">
             <Link href="/app">
-              Open app
+              Open<span className="hidden xs:inline">&nbsp;app</span>
               <ArrowRight />
             </Link>
           </Button>

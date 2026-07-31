@@ -27,7 +27,9 @@ export function Container({
   as: Tag = "div",
 }: ContainerProps) {
   return (
-    <Tag className={cn("mx-auto w-full px-5 sm:px-8", widths[width], className)}>
+    // 16px of gutter on a phone: enough to breathe, but a 320px screen still
+    // gets a usable 288px of content.
+    <Tag className={cn("mx-auto w-full px-4 sm:px-8", widths[width], className)}>
       {children}
     </Tag>
   );
