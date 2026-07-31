@@ -47,24 +47,107 @@ exercised end to end.
 Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Lucide · Prisma ORM ·
 SQLite · OpenRouter / Groq / Google Gemini APIs · Browser Notification API · localStorage
 
-## Getting started
+## Running the app
 
-Requires Node.js 20 or newer.
+Requires **Node.js 20 or newer** (developed on 24.16) and npm 10+. No database server, no
+Docker, no services to start — SQLite is a file on disk.
 
 ```bash
 npm install
-cp .env.example .env      # Windows: copy .env.example .env
-npx prisma migrate dev
-npm run dev
+cp .env.example .env            # PowerShell: Copy-Item .env.example .env
+npx prisma migrate dev          # creates prisma/dev.db and generates the client
+npm run dev                     # http://localhost:3000
 ```
 
-Open <http://localhost:3000>. The design system reference lives at
-<http://localhost:3000/design>.
+`.env` holds exactly one variable, `DATABASE_URL="file:./dev.db"`. Provider API keys are
+deliberately **not** environment variables — see below.
 
-You will need an API key from one of the supported providers
-([OpenRouter](https://openrouter.ai/keys), [Groq](https://console.groq.com/keys) or
-[Google AI Studio](https://aistudio.google.com/apikey)). The setup wizard walks you through
-adding it.
+To run the production build instead:
+
+```bash
+npm run build
+npm run start                   # http://localhost:3000
+PORT=3111 npm run start         # or on another port; PowerShell: $env:PORT=3111; npm run start
+```
+
+### You need an API key, and only a human can supply it
+
+AI Chat calls whichever provider you choose with **your own key** — from
+[OpenRouter](https://openrouter.ai/keys), [Groq](https://console.groq.com/keys) or
+[Google AI Studio](https://aistudio.google.com/apikey). The key is entered in the setup
+wizard at `/setup` and lives in that browser's localStorage. It is never read from `.env`,
+never written to disk and never committed, which also means **it cannot be injected by a
+script or a CI job**. Everything except chat — mood, journal, habits, the daily report,
+emergency support — works with no key at all.
+
+## Notes for automated agents
+
+Everything below is the non-obvious part. The rest of the app behaves as you would expect.
+
+**`/app/*` redirects to `/setup` unless localStorage is seeded.** `components/layout/app-shell.tsx`
+sends anyone without a provider, key *and* model to the wizard, exempting only
+`/app/settings` and `/app/support`. The redirect is client-side, so `curl` reports `200` for
+`/app/chat` while a real browser lands on `/setup` — a browser-driven test that skips the
+seed will silently measure the wizard on every route. Seed before navigating:
+
+```js
+localStorage.setItem("mindcare.guest-id", "guest_testtest");
+localStorage.setItem("mindcare.settings", JSON.stringify({
+  provider: "groq", apiKey: "test-key", model: "llama-3.3-70b-versatile",
+  temperature: 0.7, maxTokens: 2048, onboarded: true, language: "auto",
+  voice: { cloudInput: false, speakReplies: false, voiceURI: "", rate: 0.95 },
+}));
+```
+
+In Playwright use `context.addInitScript`, which runs before every navigation. Note it
+re-runs on *each* page load, so it will overwrite a setting changed through the UI earlier
+in the same test.
+
+**The localStorage keys are dotted, not underscored.** They are listed in one place,
+`STORAGE_KEYS` in `lib/constants.ts`: `mindcare.settings`, `mindcare.guest-id`,
+`mindcare.habits`, `mindcare.notifications`, `mindcare.theme`. Guessing
+`mindcare_settings` fails silently — the app just sees an unconfigured browser.
+
+**Exercising chat without a key.** Intercept the route rather than trying to supply one.
+`POST /api/chat` streams `text/plain` and signals the crisis panel with a header:
+
+```js
+await page.route("**/api/chat", (route) => route.fulfill({
+  status: 200,
+  headers: { "Content-Type": "text/plain; charset=utf-8", "X-MindCare-Support": "0" },
+  body: "A reply, streamed as plain text.",
+}));
+```
+
+Also stub `**/api/chat/history**` (both the `GET` list and the `POST` append) or the run
+writes into the real `prisma/dev.db`. Return a **unique `message.id` per call** — the
+read-aloud logic skips any assistant message whose id it has already spoken, so a constant
+id makes the second reply look silently broken.
+
+**Don't add dependencies.** The stack is fixed (see Tech stack). Test-only tooling such as
+Playwright belongs in a scratch directory outside the repo, never in `package.json`.
+
+**Verification, in the order worth running:**
+
+```bash
+npx tsc --noEmit                # types; must be silent
+npm run lint                    # eslint; must be silent
+rm -rf .next && npm run build   # a stale .next masks real breakage
+```
+
+A clean `npm run build` is the real gate — `next build --turbopack` catches server/client
+boundary mistakes that `tsc` does not.
+
+**Never commit** `.env`, `prisma/*.db` or exported `*.json` backups. They are git-ignored
+already; `prisma/dev.db` contains journal entries in plain text.
+
+**Voice and speech in headless browsers.** Chromium exposes no `speechSynthesis` voices at
+all, headless or headed, so read-aloud cannot be verified end to end — inject a voice list
+over `speechSynthesis.getVoices` and stub the `voice` property setter, which otherwise
+rejects any object the browser did not create. For microphone work, launch with
+`--use-fake-device-for-media-stream`; its default tone is steady enough that the
+voice-activity detector correctly treats it as background noise and never opens a turn, so
+pass `--use-file-for-fake-audio-capture=<file>.wav` with real speech-shaped audio.
 
 ## How your data is handled
 
@@ -109,11 +192,17 @@ styles/         design tokens and global CSS
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
-| `npm run start` | Serve the production build |
-| `npm run lint` | Lint |
-| `npx prisma studio` | Browse the local database |
+| `npm run dev` | Dev server with Turbopack, on port 3000 |
+| `npm run build` | Production build (`next build --turbopack`) |
+| `npm run start` | Serve the production build; honours `PORT` |
+| `npm run lint` | ESLint (flat config); silent output means clean |
+| `npx tsc --noEmit` | Typecheck only |
+| `npx prisma migrate dev` | Apply migrations and regenerate the client |
+| `npx prisma migrate status` | Check whether `dev.db` matches the schema |
+| `npx prisma studio` | Browse the local database in a browser |
+
+There is no test script. Verification is `tsc` + `lint` + a clean `build`, plus driving the
+running app in a browser.
 
 ## Design system
 
