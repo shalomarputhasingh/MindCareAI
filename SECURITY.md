@@ -9,7 +9,7 @@ account system and no server that holds user data.
 |---|---|---|
 | Guest id | Browser localStorage | No |
 | Provider API key | Browser localStorage | No |
-| App settings (provider, model, temperature) | Browser localStorage | No |
+| App settings (provider, model, temperature, language) | Browser localStorage | No |
 | Journal, moods, habits, chat history | `prisma/dev.db` on the local disk | No — git-ignored |
 | `DATABASE_URL` | `.env` | No — git-ignored; `.env.example` holds the template |
 | Voice recordings | Nowhere — held in memory only, for the length of one request | No |
@@ -52,6 +52,11 @@ is never sent automatically. There are two backends:
   then subject to that provider's retention policy. Nothing else in the app sends audio
   anywhere.
 
+If you have chosen a language rather than leaving it on automatic, a two-letter code —
+`ta` or `en`, nothing more — travels with the recording so the provider does not have to
+guess. On the Gemini path that code is placed into a prompt, so the route handler accepts
+it only if it is exactly two letters and drops anything else.
+
 **Live voice chat.** A separate, explicitly entered mode in which the conversation runs
 hands-free. It differs from push-to-talk in two ways that matter:
 
@@ -73,7 +78,9 @@ never written to a temporary file, and never included in an exported backup. As 
 `/api/chat`, the transcription route never logs the request, because it carries your key.
 
 **Read aloud (text to speech).** Uses the operating system's own `speechSynthesis` voices.
-No key, no network request, and nothing uploaded. Auto-read is suppressed while the crisis
+No key, no network request, and nothing uploaded — including for Tamil, which is read by
+whatever Tamil voice the device already has, not by a service. If it has none, the reply is
+shown but not spoken; nothing is fetched to make up the difference. Auto-read is suppressed while the crisis
 support screen is showing — a support message spoken by a synthetic voice is not something
 to hand someone unprompted. This holds in live voice chat too: the reply appears on screen
 but is not read out, and the session is left running rather than cut off mid-conversation.

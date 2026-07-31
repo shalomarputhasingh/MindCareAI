@@ -34,6 +34,13 @@ interface LiveVoicePanelProps {
   /** The last thing that was sent, so it's clear what was heard. */
   lastHeard: string | null;
   usesCloud: boolean;
+  /**
+   * The language the browser recogniser is listening for. Unused in cloud mode,
+   * where the provider detects it — but on the browser path it listens for one
+   * language only, and being told which is the difference between "this is
+   * broken" and "I need to change a setting".
+   */
+  listeningLanguage: string;
   error: string | null;
   onEnd: () => void;
   onInterrupt: () => void;
@@ -51,6 +58,7 @@ export function LiveVoicePanel({
   partial,
   lastHeard,
   usesCloud,
+  listeningLanguage,
   error,
   onEnd,
   onInterrupt,
@@ -159,7 +167,7 @@ export function LiveVoicePanel({
         <p className="type-caption text-[11px] text-balance">
           {usesCloud
             ? "Your microphone is open, and each turn is uploaded to your AI provider to be transcribed."
-            : "Your microphone is open, and your browser is doing the listening."}{" "}
+            : `Your microphone is open, and your browser is doing the listening, in ${listeningLanguage}.`}{" "}
           Replies send as soon as you pause — nothing is reviewed first.
         </p>
       </div>

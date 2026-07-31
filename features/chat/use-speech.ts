@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { primarySubtag } from "@/lib/language";
+
 /**
  * Reads text aloud with the browser's own speech synthesis.
  *
@@ -29,6 +31,50 @@ export function toSpokenText(markdown: string): string {
       .replace(/\s+/g, " ")
       .trim()
   );
+}
+
+/**
+ * Which voice reads a given reply.
+ *
+ * The saved preference wins, but only when it can actually pronounce what it
+ * has been handed. A Tamil reply read by an English voice is not merely
+ * accented — the engine has no mapping for Tamil script and produces silence or
+ * a spelled-out mess, which is a bad thing to do to someone who has just
+ * written something difficult. So a language mismatch demotes the preference
+ * and the best-matching installed voice is used instead.
+ */
+export function pickVoice(
+  voices: SpeechSynthesisVoice[],
+  voiceURI?: string,
+  lang?: string,
+): SpeechSynthesisVoice | null {
+  const preferred = voiceURI ? voices.find((v) => v.voiceURI === voiceURI) : undefined;
+  if (!lang) return preferred ?? null;
+
+  const wanted = primarySubtag(lang);
+  if (preferred && primarySubtag(preferred.lang) === wanted) return preferred;
+
+  // Anything reaching here has a preference that cannot read this text.
+  const matching = voices.filter((v) => primarySubtag(v.lang) === wanted);
+  if (matching.length === 0) {
+    // Nothing installed for this language either. Leaving the voice unset lets
+    // the engine choose from `utterance.lang`, which may still find something;
+    // forcing the mismatched preference guarantees it cannot.
+    return null;
+  }
+
+  // Exact region first (ta-IN over ta-LK), then on-device over network voices.
+  const exact = matching.filter(
+    (v) => v.lang.toLowerCase().replace("_", "-") === lang.toLowerCase(),
+  );
+  const pool = exact.length > 0 ? exact : matching;
+  return pool.find((v) => v.localService) ?? pool[0];
+}
+
+/** True when the device has any voice that can read this language. */
+export function hasVoiceFor(voices: SpeechSynthesisVoice[], lang: string): boolean {
+  const wanted = primarySubtag(lang);
+  return voices.some((voice) => primarySubtag(voice.lang) === wanted);
 }
 
 export function useSpeech() {
@@ -61,7 +107,7 @@ export function useSpeech() {
   }, []);
 
   const speak = useCallback(
-    (text: string, options?: { voiceURI?: string; rate?: number }) => {
+    (text: string, options?: { voiceURI?: string; rate?: number; lang?: string }) => {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
       const spoken = toSpokenText(text);
@@ -72,13 +118,14 @@ export function useSpeech() {
 
       const utterance = new SpeechSynthesisUtterance(spoken);
       utterance.rate = options?.rate ?? 0.95;
+      if (options?.lang) utterance.lang = options.lang;
 
-      if (options?.voiceURI) {
-        const match = window.speechSynthesis
-          .getVoices()
-          .find((voice) => voice.voiceURI === options.voiceURI);
-        if (match) utterance.voice = match;
-      }
+      const voice = pickVoice(
+        window.speechSynthesis.getVoices(),
+        options?.voiceURI,
+        options?.lang,
+      );
+      if (voice) utterance.voice = voice;
 
       utterance.onend = () => {
         utteranceRef.current = null;

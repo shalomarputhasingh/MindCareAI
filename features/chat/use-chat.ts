@@ -90,6 +90,7 @@ export function useChat({ guestId, settings, useContext }: UseChatOptions) {
             maxTokens: settings.maxTokens,
             guestId,
             useContext,
+            language: settings.language,
             messages: history.map(({ role, content }) => ({ role, content })),
           }),
         });

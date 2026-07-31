@@ -5,6 +5,10 @@
  * route handlers under `app/api`.
  */
 
+import type { ChatLanguage } from "@/lib/language";
+
+export type { ChatLanguage };
+
 /* -------------------------------------------------------------------------- */
 /*                                AI providers                                */
 /* -------------------------------------------------------------------------- */
@@ -58,6 +62,8 @@ export interface AppSettings {
   /** Set once the setup wizard has been completed. */
   onboarded: boolean;
   voice: VoiceSettings;
+  /** Which language the assistant talks in. See `lib/language.ts`. */
+  language: ChatLanguage;
 }
 
 /* -------------------------------------------------------------------------- */

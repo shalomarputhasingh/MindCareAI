@@ -22,6 +22,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { ApiError, backupApi, type BackupData } from "@/lib/api-client";
 import { DEFAULT_HABITS, STORAGE_KEYS } from "@/lib/constants";
 import { toDayKey } from "@/lib/date";
+import { isChatLanguage } from "@/lib/language";
 import type { AppSettings, HabitDefinition } from "@/types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -41,6 +42,7 @@ function portableSettings(settings: AppSettings) {
     temperature: settings.temperature,
     maxTokens: settings.maxTokens,
     onboarded: settings.onboarded,
+    language: settings.language,
   };
 }
 
@@ -64,6 +66,7 @@ function readPortableSettings(value: unknown): Partial<AppSettings> {
     patch.maxTokens = Math.min(32_000, Math.max(64, Math.trunc(value.maxTokens)));
   }
   if (typeof value.onboarded === "boolean") patch.onboarded = value.onboarded;
+  if (isChatLanguage(value.language)) patch.language = value.language;
 
   return patch;
 }

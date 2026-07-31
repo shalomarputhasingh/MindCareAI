@@ -19,9 +19,19 @@ import { useSpeech } from "@/features/chat/use-speech";
 import { useSettings } from "@/hooks/use-settings";
 import { supportsTranscription } from "@/lib/ai/voice";
 import { PROVIDER_META } from "@/lib/constants";
+import { primarySubtag, speechLangFor } from "@/lib/language";
 
 const BROWSER_VOICE = "__browser_default__";
-const SAMPLE = "This is how replies will sound. Take a breath — there's no rush.";
+
+/**
+ * The sample is spoken in the language replies will actually arrive in — the
+ * only way to find out whether this device can read Tamil aloud is to hear it
+ * try.
+ */
+const SAMPLES: Record<string, string> = {
+  en: "This is how replies will sound. Take a breath — there's no rush.",
+  ta: "பதில்கள் இப்படித்தான் ஒலிக்கும். ஒரு நிமிஷம் மூச்சு விடுங்க, அவசரமே இல்ல.",
+};
 
 /**
  * Voice preferences.
@@ -38,15 +48,23 @@ export function VoiceCard() {
   const cloudCapable = provider !== null && supportsTranscription(provider);
   const providerLabel = provider ? PROVIDER_META[provider].label : "your provider";
 
-  // Local voices first — they're what people recognise, and remote ones vary in
-  // latency enough to feel broken.
+  // The chosen language first, so a Tamil speaker isn't scrolling past forty
+  // English voices to find one that can read a Tamil reply. Then local voices,
+  // which people recognise and which don't have the latency that makes a remote
+  // voice feel broken.
+  const browserLocale = typeof navigator === "undefined" ? "" : navigator.language;
+  const sampleLang = speechLangFor(settings.language, browserLocale);
+  const wanted = primarySubtag(sampleLang);
   const sortedVoices = useMemo(
     () =>
       [...voices].sort((a, b) => {
+        const aWanted = primarySubtag(a.lang) === wanted;
+        const bWanted = primarySubtag(b.lang) === wanted;
+        if (aWanted !== bWanted) return aWanted ? -1 : 1;
         if (a.localService !== b.localService) return a.localService ? -1 : 1;
         return a.name.localeCompare(b.name);
       }),
-    [voices],
+    [voices, wanted],
   );
 
   function preview() {
@@ -54,7 +72,11 @@ export function VoiceCard() {
       stop();
       return;
     }
-    speak(SAMPLE, { voiceURI: voice.voiceURI, rate: voice.rate });
+    speak(SAMPLES[wanted] ?? SAMPLES.en, {
+      voiceURI: voice.voiceURI,
+      rate: voice.rate,
+      lang: sampleLang,
+    });
   }
 
   return (
@@ -189,6 +211,10 @@ export function VoiceCard() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="type-caption text-xs">
+                A preference, not a rule: a reply in another language is read by a voice
+                that can pronounce it.
+              </p>
             </div>
 
             <div className="space-y-3">

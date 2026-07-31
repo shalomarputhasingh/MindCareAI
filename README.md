@@ -3,7 +3,8 @@
 A calmer place to check in with yourself.
 
 MindCareAI is an AI wellbeing companion for daily reflection, mood tracking and healthy
-habits. It runs entirely on your own machine: no accounts, no cloud database, no telemetry.
+habits, in English or Tamil. It runs entirely on your own machine: no accounts, no cloud
+database, no telemetry.
 
 > **MindCareAI is a wellbeing companion, not a medical service.** It is not a therapist,
 > doctor or emergency service, and it is not a substitute for professional help. If you are
@@ -76,6 +77,9 @@ adding it.
   never logged and never committed.
 - **Nothing personal is committed.** `.gitignore` excludes `.env`, the database file and
   any exported backup.
+- **Tamil, as well as English.** By default the assistant answers in whichever language
+  you wrote in, including Tamil typed in English letters, and you can pin it to one
+  language in Settings → Language. The interface itself stays in English.
 - **Voice is opt-in, and says where it goes.** Push-to-talk dictation runs only while you
   hold the mic open, and the transcript lands in the message box for you to read and edit
   before it is sent. Live voice chat is a separate mode you enter deliberately: the

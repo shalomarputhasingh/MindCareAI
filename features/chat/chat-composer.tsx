@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSettings } from "@/hooks/use-settings";
+import { describeSpeechLang } from "@/lib/language";
 import { cn } from "@/lib/utils";
 
 import { useVoiceInput } from "./use-voice-input";
@@ -41,6 +42,7 @@ export function ChatComposer({
     apiKey: settings.apiKey,
     model: settings.model,
     cloudEnabled: settings.voice.cloudInput,
+    language: settings.language,
     // Deliberately never auto-sends. A misheard word in an emotional
     // conversation is worse than a slower flow, so the transcript lands in the
     // box for the person to read and fix first.
@@ -70,6 +72,10 @@ export function ChatComposer({
 
   const recording = voice.status === "recording";
   const transcribing = voice.status === "transcribing";
+
+  // Worth naming on the browser path: it listens for one language at a time, so
+  // speaking Tamil to a recogniser set to English gets you nothing back.
+  const listeningLanguage = describeSpeechLang(voice.speechLang);
 
   return (
     <div className="space-y-2">
@@ -219,7 +225,7 @@ export function ChatComposer({
           Recording
           {voice.mode === "cloud"
             ? " — this audio will be sent to your AI provider"
-            : " — handled by your browser"}
+            : ` — handled by your browser, listening in ${listeningLanguage}`}
         </p>
       ) : justDictated ? (
         <p aria-live="polite" className="type-caption text-center text-xs">

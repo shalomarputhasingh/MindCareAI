@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useGuestId } from "@/hooks/use-guest-id";
 import { useSettings } from "@/hooks/use-settings";
+import { describeSpeechLang, speechLangFor, spokenLangFor } from "@/lib/language";
 
 import { ChatComposer } from "./chat-composer";
 import { LiveVoicePanel, type LivePhase } from "./live-voice-panel";
@@ -40,6 +41,8 @@ export function ChatPanel() {
   const { settings, isConfigured, hydrated } = useSettings();
   const [useContext, setUseContext] = useState(true);
   const [liveOn, setLiveOn] = useState(false);
+  // Read defensively: this component renders on the server for the first paint.
+  const browserLocale = typeof navigator === "undefined" ? "" : navigator.language;
 
   const chat = useChat({ guestId, settings, useContext });
 
@@ -84,9 +87,16 @@ export function ChatPanel() {
   const speakMessage = useCallback(
     (id: string, content: string) => {
       setSpeakingId(id);
-      speak(content, { voiceURI, rate });
+      // The reply's own script decides the voice. In "auto" it is the only
+      // evidence available, and even on a fixed setting a model sometimes
+      // answers in the other language — following the text keeps it audible.
+      speak(content, {
+        voiceURI,
+        rate,
+        lang: spokenLangFor(settings.language, content, browserLocale),
+      });
     },
-    [speak, voiceURI, rate],
+    [speak, voiceURI, rate, settings.language, browserLocale],
   );
 
   // Never leave a stale highlight once the utterance ends on its own.
@@ -144,6 +154,7 @@ export function ChatPanel() {
     apiKey: settings.apiKey,
     model: settings.model,
     cloudEnabled: settings.voice.cloudInput,
+    language: settings.language,
     onUtterance: (text) => {
       setLastHeard(text);
       pendingRef.current = text;
@@ -372,6 +383,9 @@ export function ChatPanel() {
               partial={live.partial}
               lastHeard={lastHeard}
               usesCloud={live.usesCloud}
+              listeningLanguage={describeSpeechLang(
+                speechLangFor(settings.language, browserLocale),
+              )}
               error={live.error}
               onEnd={() => void toggleLive()}
               onInterrupt={stopSpeaking}

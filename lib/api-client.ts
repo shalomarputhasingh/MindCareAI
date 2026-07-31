@@ -206,18 +206,23 @@ export const voiceApi = {
    * Multipart rather than JSON, so the audio isn't inflated by base64 on the
    * way to a route handler running on this same machine.
    */
-  transcribe: async (
-    provider: Provider,
-    apiKey: string,
-    audio: Blob,
-    model?: string,
-    signal?: AbortSignal,
-  ): Promise<string> => {
+  transcribe: async (options: {
+    provider: Provider;
+    apiKey: string;
+    audio: Blob;
+    model?: string;
+    /** ISO-639-1 hint, e.g. `ta`. Omitted, the provider detects the language. */
+    language?: string;
+    signal?: AbortSignal;
+  }): Promise<string> => {
+    const { provider, apiKey, audio, model, language, signal } = options;
+
     const form = new FormData();
     form.append("audio", audio, "speech");
     form.append("provider", provider);
     form.append("apiKey", apiKey);
     if (model) form.append("model", model);
+    if (language) form.append("language", language);
 
     let response: Response;
     try {

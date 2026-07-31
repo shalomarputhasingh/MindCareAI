@@ -8,6 +8,7 @@ import {
 } from "@/lib/ai";
 import { BadRequest, jsonError, readJson, requireGuestId } from "@/lib/api";
 import { MOOD_OPTIONS } from "@/lib/constants";
+import { isChatLanguage } from "@/lib/language";
 import { formatLongDate, shiftDayKey, toDayKey } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { isProvider } from "@/types";
@@ -50,7 +51,11 @@ export async function POST(request: Request) {
       apiKey,
       model,
       messages,
-      system: buildSystemPrompt({ context, crisis }),
+      system: buildSystemPrompt({
+        context,
+        crisis,
+        language: isChatLanguage(body.language) ? body.language : "auto",
+      }),
       temperature: clamp(body.temperature, 0, 2, 0.7),
       maxTokens: Math.trunc(clamp(body.maxTokens, 64, 32_000, 1024)),
       signal: request.signal,

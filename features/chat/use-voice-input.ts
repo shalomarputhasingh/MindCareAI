@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supportsTranscription } from "@/lib/ai/voice";
 import { voiceApi } from "@/lib/api-client";
+import { speechLangFor, transcriptionHintFor, type ChatLanguage } from "@/lib/language";
 import type { Provider } from "@/types";
 
 import {
@@ -29,6 +30,8 @@ interface UseVoiceInputOptions {
   model: string;
   /** The user's opt-in to uploading audio for transcription. */
   cloudEnabled: boolean;
+  /** Which language to listen for. See `lib/language.ts`. */
+  language: ChatLanguage;
   /** Receives the finished transcript, for review before sending. */
   onTranscript: (text: string) => void;
 }
@@ -47,6 +50,7 @@ export function useVoiceInput({
   apiKey,
   model,
   cloudEnabled,
+  language,
   onTranscript,
 }: UseVoiceInputOptions) {
   const [status, setStatus] = useState<VoiceInputStatus>("idle");
@@ -59,8 +63,8 @@ export function useVoiceInput({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   // Read inside async callbacks so a stale closure can't fire the wrong handler.
-  const latest = useRef({ provider, apiKey, model, cloudEnabled, onTranscript });
-  latest.current = { provider, apiKey, model, cloudEnabled, onTranscript };
+  const latest = useRef({ provider, apiKey, model, cloudEnabled, language, onTranscript });
+  latest.current = { provider, apiKey, model, cloudEnabled, language, onTranscript };
 
   // Capability detection happens after mount — `window` isn't there on the server.
   useEffect(() => {
@@ -114,7 +118,7 @@ export function useVoiceInput({
         return;
       }
 
-      const { provider, apiKey, model, onTranscript } = latest.current;
+      const { provider, apiKey, model, language, onTranscript } = latest.current;
       if (!provider) {
         setStatus("idle");
         return;
@@ -125,13 +129,14 @@ export function useVoiceInput({
       abortRef.current = controller;
 
       try {
-        const text = await voiceApi.transcribe(
+        const text = await voiceApi.transcribe({
           provider,
           apiKey,
-          blob,
+          audio: blob,
           model,
-          controller.signal,
-        );
+          language: transcriptionHintFor(language),
+          signal: controller.signal,
+        });
         setStatus("idle");
         if (text) onTranscript(text);
       } catch (caught) {
@@ -156,7 +161,10 @@ export function useVoiceInput({
     if (!Ctor) return;
 
     const recognition = new Ctor();
-    recognition.lang = navigator.language || "en-US";
+    // One language at a time is all the Web Speech API offers, so "auto" can
+    // only mean the browser's own locale. Choosing Tamil in Settings is what
+    // makes Tamil dictation work here; cloud transcription needs no such help.
+    recognition.lang = speechLangFor(latest.current.language, navigator.language);
     recognition.continuous = true;
     recognition.interimResults = false;
 
@@ -250,6 +258,8 @@ export function useVoiceInput({
     error,
     mode,
     available: mode !== "none",
+    /** What the browser recogniser is listening for; meaningless in cloud mode. */
+    speechLang: speechLangFor(language, typeof navigator === "undefined" ? "" : navigator.language),
     start,
     stop,
     cancel,

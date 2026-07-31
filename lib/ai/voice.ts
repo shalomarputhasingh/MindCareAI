@@ -24,6 +24,13 @@ export interface TranscribeRequest {
   audio: Blob;
   /** Provider chat model, used by Gemini which transcribes with its own model. */
   model?: string;
+  /**
+   * ISO-639-1 hint, e.g. `ta`. Left out, both providers detect the language
+   * themselves — which they do well on a full sentence and badly on a short,
+   * hesitant one, where Tamil in particular tends to come back romanised or as
+   * a neighbouring language.
+   */
+  language?: string;
   signal?: AbortSignal;
 }
 
@@ -61,13 +68,14 @@ function fileNameFor(mimeType: string): string {
   return `speech.${extensions[base] ?? "webm"}`;
 }
 
-async function transcribeGroq({ apiKey, audio, signal }: TranscribeRequest) {
+async function transcribeGroq({ apiKey, audio, language, signal }: TranscribeRequest) {
   const form = new FormData();
   // MediaRecorder produces WebM/Opus on Chrome and MP4/AAC on Safari, so the
   // type is read off the blob rather than assumed.
   form.append("file", audio, fileNameFor(audio.type || "audio/webm"));
   form.append("model", GROQ_TRANSCRIBE_MODEL);
   form.append("response_format", "json");
+  if (language) form.append("language", language);
 
   const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
     method: "POST",
@@ -92,9 +100,27 @@ async function transcribeGroq({ apiKey, audio, signal }: TranscribeRequest) {
   return (body.text ?? "").trim();
 }
 
-async function transcribeGemini({ apiKey, audio, model, signal }: TranscribeRequest) {
+/** Language names Gemini responds to, keyed by the ISO code we send. */
+const LANGUAGE_NAMES: Record<string, string> = {
+  ta: "Tamil, and write it in Tamil script",
+  en: "English",
+};
+
+async function transcribeGemini({
+  apiKey,
+  audio,
+  model,
+  language,
+  signal,
+}: TranscribeRequest) {
   const base64 = await blobToBase64(audio);
   const chatModel = model?.replace(/^models\//, "") || "gemini-2.0-flash";
+
+  // Gemini takes no `language` parameter, so the hint has to go in the prompt.
+  const spoken = language ? LANGUAGE_NAMES[language] : undefined;
+  const instruction = spoken
+    ? `Transcribe this audio exactly as spoken. The speaker is speaking ${spoken}. Return only the transcription, with no commentary, labels, translation or quotation marks. If there is no intelligible speech, return nothing at all.`
+    : "Transcribe this audio exactly as spoken, in the language and script it was spoken in. Return only the transcription, with no commentary, labels, translation or quotation marks. If there is no intelligible speech, return nothing at all.";
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
@@ -111,9 +137,7 @@ async function transcribeGemini({ apiKey, audio, model, signal }: TranscribeRequ
           {
             role: "user",
             parts: [
-              {
-                text: "Transcribe this audio exactly as spoken. Return only the transcription, with no commentary, labels or quotation marks. If there is no intelligible speech, return nothing at all.",
-              },
+              { text: instruction },
               {
                 inline_data: {
                   mime_type: (audio.type || "audio/webm").split(";")[0].trim(),

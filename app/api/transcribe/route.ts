@@ -42,11 +42,17 @@ export async function POST(request: Request) {
 
     const model = String(form.get("model") ?? "").trim() || undefined;
 
+    // A two-letter ISO-639-1 hint and nothing else — this is interpolated into
+    // a prompt on the Gemini path, so it is validated by shape, not trusted.
+    const raw = String(form.get("language") ?? "").trim().toLowerCase();
+    const language = /^[a-z]{2}$/.test(raw) ? raw : undefined;
+
     const text = await transcribe({
       provider,
       apiKey,
       audio,
       model,
+      language,
       signal: request.signal,
     });
 

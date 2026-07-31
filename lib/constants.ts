@@ -1,3 +1,4 @@
+import { CHAT_LANGUAGES, type ChatLanguage } from "@/lib/language";
 import type {
   AppSettings,
   HabitDefinition,
@@ -52,6 +53,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   maxTokens: 2048,
   onboarded: false,
   voice: DEFAULT_VOICE,
+  // Following the person is the kinder default than making them find a picker
+  // before the app will answer in their own language.
+  language: "auto",
 };
 
 /** Display metadata for each supported provider. */
@@ -78,6 +82,12 @@ export const PROVIDER_META: Record<
     keyUrl: "https://aistudio.google.com/apikey",
   },
 };
+
+/**
+ * Languages the assistant can hold a conversation in. The interface itself is
+ * English throughout; this is about the conversation.
+ */
+export const LANGUAGE_OPTIONS: ChatLanguage[] = [...CHAT_LANGUAGES];
 
 export const MOOD_OPTIONS: {
   score: MoodScore;

@@ -3,7 +3,12 @@ import { DisclaimerNote } from "@/components/shared/disclaimer-note";
 import { PageHeader } from "@/components/shared/page-header";
 import { DataCard } from "@/features/backup";
 import { NotificationsCard } from "@/features/notifications";
-import { AiSettingsCard, AppearanceCard, VoiceCard } from "@/features/settings";
+import {
+  AiSettingsCard,
+  AppearanceCard,
+  LanguageCard,
+  VoiceCard,
+} from "@/features/settings";
 
 export default function SettingsPage() {
   return (
@@ -13,6 +18,7 @@ export default function SettingsPage() {
         description="Your AI provider, model and preferences — all stored on this device."
       />
       <AiSettingsCard />
+      <LanguageCard />
       <VoiceCard />
       <NotificationsCard />
       <DataCard />

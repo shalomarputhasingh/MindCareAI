@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supportsTranscription } from "@/lib/ai/voice";
 import { voiceApi } from "@/lib/api-client";
+import { speechLangFor, transcriptionHintFor, type ChatLanguage } from "@/lib/language";
 import type { Provider } from "@/types";
 
 import { getRecognitionCtor, pickMimeType, type SpeechRecognitionLike } from "./speech-api";
@@ -64,6 +65,8 @@ interface UseLiveVoiceOptions {
   apiKey: string;
   model: string;
   cloudEnabled: boolean;
+  /** Which language to listen for. See `lib/language.ts`. */
+  language: ChatLanguage;
   /** Called with each finished sentence. */
   onUtterance: (text: string) => void;
   /** Called when someone talks over the assistant, so playback can be cut. */
@@ -75,6 +78,7 @@ export function useLiveVoice({
   apiKey,
   model,
   cloudEnabled,
+  language,
   onUtterance,
   onBargeIn,
 }: UseLiveVoiceOptions) {
@@ -108,8 +112,8 @@ export function useLiveVoice({
     handedOver: false,
   });
 
-  const latest = useRef({ provider, apiKey, model, onUtterance, onBargeIn });
-  latest.current = { provider, apiKey, model, onUtterance, onBargeIn };
+  const latest = useRef({ provider, apiKey, model, language, onUtterance, onBargeIn });
+  latest.current = { provider, apiKey, model, language, onUtterance, onBargeIn };
 
   const usesCloud =
     cloudEnabled &&
@@ -188,7 +192,7 @@ export function useLiveVoice({
       });
       if (blob.size === 0) return;
 
-      const { provider, apiKey, model, onUtterance } = latest.current;
+      const { provider, apiKey, model, language, onUtterance } = latest.current;
       if (!provider) return;
 
       setState("transcribing");
@@ -196,13 +200,14 @@ export function useLiveVoice({
       abortRef.current = controller;
 
       try {
-        const text = await voiceApi.transcribe(
+        const text = await voiceApi.transcribe({
           provider,
           apiKey,
-          blob,
+          audio: blob,
           model,
-          controller.signal,
-        );
+          language: transcriptionHintFor(language),
+          signal: controller.signal,
+        });
         if (text.trim()) onUtterance(text.trim());
         else setState((current) => (current === "transcribing" ? "listening" : current));
       } catch (caught) {
@@ -333,7 +338,8 @@ export function useLiveVoice({
     if (!Ctor) return;
 
     const recognition = new Ctor();
-    recognition.lang = navigator.language || "en-US";
+    // One language at a time, so "auto" can only mean the browser's locale.
+    recognition.lang = speechLangFor(latest.current.language, navigator.language);
     // Not continuous: the browser's own endpointing closes the turn on silence,
     // which is exactly the segmentation live mode needs.
     recognition.continuous = false;

@@ -24,6 +24,11 @@ const FAQS = [
       "Nothing until you ask. Press the mic once and it's push-to-talk: you read the transcript and edit it before it sends. Live voice chat is a separate mode you start deliberately — there the microphone stays open and each turn sends as soon as you pause, so nothing is reviewed first. Either way, your browser does the listening by default; turn on cloud transcription in Settings and the recording goes to your AI provider instead, which is more accurate but does leave this machine. The audio is never saved to disk. Replies read aloud use your device's own voices and are never uploaded.",
   },
   {
+    question: "Can I talk to it in Tamil?",
+    answer:
+      "Yes. Write in Tamil and you'll be answered in Tamil — everyday spoken Tamil, not the formal written kind. Tamil typed in English letters works too, and the reply comes back the same way rather than in Tamil script you didn't ask for. You can also pin it to Tamil or English in Settings → Language. Voice works in Tamil as well, though the browser's own recogniser listens for one language at a time, so you'll want to choose Tamil there, or switch on cloud transcription, which works it out for itself. The app's own buttons and labels are English throughout — this is about the conversation, not a translated interface.",
+  },
+  {
     question: "Do I need an API key?",
     answer: `Only for AI Chat. MindCareAI doesn't run its own models, so bring a key from ${PROVIDER_META.openrouter.label}, ${PROVIDER_META.groq.label} or ${PROVIDER_META.gemini.label} and your messages go straight from your device to that provider. Mood, journal, habits and the daily report all work without one.`,
   },
